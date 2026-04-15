@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
+</head>
+<body>
+  <div id="out"></div>
+  <script>
+    const needed = [
+        'Activity', 'Calculator', 'CalendarCheck', 'Users', 
+        'Bell', 'CheckCircle2', 'Sparkles', 'Navigation', 
+        'Home', 'LayoutDashboard', 'CalendarDays', 'Plus', 
+        'ChevronDown', 'BarChart3', 'ScanText', 'ArrowRight',
+        'SearchCode', 'Fingerprint', 'ShieldCheck', 'Gamepad2', 
+        'MonitorPlay', 'CloudCog', 'LayoutGrid', 'Dumbbell', 
+        'Banknote', 'HelpCircle', 'UserCircle2', 'X', 'RefreshCw', 
+        'CreditCard', 'Eye', 'DollarSign', 'Shield', 'Zap'
+    ];
+    let missing = [];
+    for(let icon of needed) {
+        if (!window.LucideReact[icon]) {
+            missing.push(icon);
+        }
+    }
+    document.getElementById('out').innerText = missing.length > 0 ? 'MISSING: ' + missing.join(', ') : 'ALL ICONS ARE PRESENT';
+  </script>
+</body>
+</html>
