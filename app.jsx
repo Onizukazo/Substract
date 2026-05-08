@@ -1,4 +1,4 @@
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useCallback } = React;
 const { createRoot } = ReactDOM;
 const {
   Home, CreditCard, Users, Sparkles, Bell, ChevronRight,
@@ -7,63 +7,63 @@ const {
   CheckCircle2, Clock, Eye, DollarSign, Shield, BarChart3,
   AlertCircle, PieChart, ExternalLink, Archive, PhoneCall,
   FileText, Zap, MessageCircle, UserPlus, Link, Percent,
-  Settings, Copy, MoreVertical
+  Settings, Copy, MoreVertical, Volume2, MicOff, Square
 } = window.LucideReact;
 
 // =========================================
 // DATA
 // =========================================
 const INITIAL_SUBS = [
-  { id:1, name:"Netflix",    color:"#ef4444", plan:"Premium",  amt:15.49,  due:"Nov 15",   days:32, cat:"Entertainment" },
-  { id:2, name:"Spotify",    color:"#10b981", plan:"Student",  amt:5.99,   due:"In 2 days",days:2,  cat:"Entertainment", aiTip:true },
-  { id:3, name:"Adobe CC",   color:"#ef4444", plan:"All Apps", amt:54.99,  due:"Nov 20",   days:37, cat:"Productivity", insight:"Only Photoshop used. Photography plan saves $45/mo." },
-  { id:4, name:"Disney+",    color:"#1d4ed8", plan:"Annual",   amt:13.99,  due:"Dec 1",    days:48, cat:"Entertainment", inactive:true, insight:"No activity for 28 days. Likely unused." },
-  { id:5, name:"iCloud+",    color:"#3b82f6", plan:"200GB",    amt:2.99,   due:"Nov 18",   days:35, cat:"Cloud Storage" },
-  { id:6, name:"YouTube",    color:"#ef4444", plan:"Premium",  amt:13.99,  due:"In 4 days",days:4,  cat:"Entertainment" },
-  { id:7, name:"Notion",     color:"#1e293b", plan:"Plus",     amt:8.00,   due:"Nov 25",   days:42, cat:"Productivity" },
-  { id:8, name:"FitnessPro", color:"#8b5cf6", plan:"Annual",   amt:29.99,  due:"Dec 5",    days:52, cat:"Health", insight:"No activity for 28 days. Likely unused." },
+  { id:1, name:"Netflix",    color:"#ef4444", plan:"Premium",  amt:649,    due:"Nov 15",   days:32, cat:"Entertainment" },
+  { id:2, name:"Spotify",    color:"#10b981", plan:"Student",  amt:59,     due:"In 2 days",days:2,  cat:"Entertainment", aiTip:true },
+  { id:3, name:"Adobe CC",   color:"#ef4444", plan:"All Apps", amt:4230,   due:"Nov 20",   days:37, cat:"Productivity", insight:"Only Photoshop used. Photography plan saves â‚¹3,400/mo." },
+  { id:4, name:"Disney+",    color:"#1d4ed8", plan:"Annual",   amt:299,    due:"Dec 1",    days:48, cat:"Entertainment", inactive:true, insight:"No activity for 28 days. Likely unused." },
+  { id:5, name:"iCloud+",    color:"#3b82f6", plan:"200GB",    amt:219,    due:"Nov 18",   days:35, cat:"Cloud Storage" },
+  { id:6, name:"YouTube",    color:"#ef4444", plan:"Premium",  amt:149,    due:"In 4 days",days:4,  cat:"Entertainment" },
+  { id:7, name:"Notion",     color:"#1e293b", plan:"Plus",     amt:650,    due:"Nov 25",   days:42, cat:"Productivity" },
+  { id:8, name:"FitnessPro", color:"#8b5cf6", plan:"Annual",   amt:1999,   due:"Dec 5",    days:52, cat:"Health", insight:"No activity for 28 days. Likely unused." },
 ];
 
 const INITIAL_GROUPS = [
-  { id:101, name:"Netflix Family", members:4, perPerson:5.75, total:22.99, colors:["#ef4444","#3b82f6","#f59e0b","#ec4899"],
+  { id:101, name:"Netflix Family", members:4, perPerson:162, total:649, colors:["#ef4444","#3b82f6","#f59e0b","#ec4899"],
     memberNames:["You","Anita","Priya","Vikram"], subName:"Netflix", plan:"Premium Family", nextDue:"Nov 15",
-    balances:[{name:"Anita", paid:true},{name:"Priya", paid:false, owed:5.75},{name:"Vikram", paid:true}], isOwner: true },
-  { id:102, name:"YouTube Premium", members:3, perPerson:7.66, total:22.99, colors:["#ef4444","#10b981","#8b5cf6"],
+    balances:[{name:"Anita", paid:true},{name:"Priya", paid:false, owed:162},{name:"Vikram", paid:true}], isOwner: true },
+  { id:102, name:"YouTube Premium", members:3, perPerson:89, total:269, colors:["#ef4444","#10b981","#8b5cf6"],
     memberNames:["You","Rahul K.","Sneha"], subName:"YouTube", plan:"Family Premium", nextDue:"Nov 22",
-    balances:[{name:"Rahul K.", paid:true},{name:"Sneha", paid:false, owed:7.66}], isOwner: false, ownerName: "Rahul K." },
+    balances:[{name:"Rahul K.", paid:true},{name:"Sneha", paid:false, owed:89}], isOwner: false, ownerName: "Rahul K." },
 ];
 
 // AI Insight cards for carousel
 const AI_INSIGHTS = [
-  { id:'ins1', subId:4, title:"Disney+ is inactive.", desc:"No activity for 28 days. Likely unused.", save:13.99, color:"#1d4ed8" },
-  { id:'ins2', subId:3, title:"Adobe CC underused.", desc:"Only Photoshop used. Switch to Photography plan.", save:45.00, color:"#ef4444" },
-  { id:'ins3', subId:8, title:"FitnessPro unused.", desc:"No gym check-ins for 28 days.", save:29.99, color:"#8b5cf6" },
+  { id:'ins1', subId:4, title:"Disney+ is inactive.", desc:"No activity for 28 days. Likely unused.", save:299, color:"#1d4ed8" },
+  { id:'ins2', subId:3, title:"Adobe CC underused.", desc:"Only Photoshop used. Switch to Photography plan.", save:3400, color:"#ef4444" },
+  { id:'ins3', subId:8, title:"FitnessPro unused.", desc:"No gym check-ins for 28 days.", save:1999, color:"#8b5cf6" },
 ];
 
 // Subscription library for "Add" flow
 const SUB_LIBRARY = [
-  { name:"Netflix", color:"#ef4444", cat:"Entertainment", plans:[{label:"Basic",amt:6.99},{label:"Standard",amt:15.49},{label:"Premium",amt:22.99}] },
-  { name:"Spotify", color:"#10b981", cat:"Entertainment", plans:[{label:"Individual",amt:10.99},{label:"Student",amt:5.99},{label:"Duo",amt:14.99},{label:"Family",amt:16.99}] },
-  { name:"Disney+", color:"#1d4ed8", cat:"Entertainment", plans:[{label:"Basic",amt:7.99},{label:"Premium",amt:13.99}] },
-  { name:"Adobe CC", color:"#ef4444", cat:"Productivity", plans:[{label:"Photography",amt:9.99},{label:"Single App",amt:22.99},{label:"All Apps",amt:54.99}] },
-  { name:"YouTube", color:"#ef4444", cat:"Entertainment", plans:[{label:"Premium",amt:13.99},{label:"Music",amt:10.99},{label:"Family",amt:22.99}] },
-  { name:"iCloud+", color:"#3b82f6", cat:"Cloud Storage", plans:[{label:"50GB",amt:0.99},{label:"200GB",amt:2.99},{label:"2TB",amt:9.99}] },
-  { name:"Notion", color:"#1e293b", cat:"Productivity", plans:[{label:"Plus",amt:8.00},{label:"Business",amt:15.00}] },
-  { name:"Dropbox", color:"#3b82f6", cat:"Cloud Storage", plans:[{label:"Plus",amt:11.99},{label:"Professional",amt:19.99}] },
-  { name:"ChatGPT", color:"#10b981", cat:"Productivity", plans:[{label:"Plus",amt:20.00},{label:"Pro",amt:200.00}] },
-  { name:"Figma", color:"#a855f7", cat:"Productivity", plans:[{label:"Professional",amt:15.00},{label:"Organization",amt:45.00}] },
-  { name:"Canva", color:"#06b6d4", cat:"Productivity", plans:[{label:"Pro",amt:12.99},{label:"Teams",amt:14.99}] },
-  { name:"Hulu", color:"#10b981", cat:"Entertainment", plans:[{label:"Basic",amt:7.99},{label:"No Ads",amt:17.99}] },
+  { name:"Netflix", color:"#ef4444", cat:"Entertainment", plans:[{label:"Basic",amt:149},{label:"Standard",amt:499},{label:"Premium",amt:649}] },
+  { name:"Spotify", color:"#10b981", cat:"Entertainment", plans:[{label:"Individual",amt:119},{label:"Student",amt:59},{label:"Duo",amt:179},{label:"Family",amt:199}] },
+  { name:"Disney+", color:"#1d4ed8", cat:"Entertainment", plans:[{label:"Basic",amt:149},{label:"Premium",amt:299}] },
+  { name:"Adobe CC", color:"#ef4444", cat:"Productivity", plans:[{label:"Photography",amt:830},{label:"Single App",amt:1850},{label:"All Apps",amt:4230}] },
+  { name:"YouTube", color:"#ef4444", cat:"Entertainment", plans:[{label:"Premium",amt:149},{label:"Music",amt:99},{label:"Family",amt:269}] },
+  { name:"iCloud+", color:"#3b82f6", cat:"Cloud Storage", plans:[{label:"50GB",amt:75},{label:"200GB",amt:219},{label:"2TB",amt:749}] },
+  { name:"Notion", color:"#1e293b", cat:"Productivity", plans:[{label:"Plus",amt:650},{label:"Business",amt:1250}] },
+  { name:"Dropbox", color:"#3b82f6", cat:"Cloud Storage", plans:[{label:"Plus",amt:978},{label:"Professional",amt:1650}] },
+  { name:"ChatGPT", color:"#10b981", cat:"Productivity", plans:[{label:"Plus",amt:1650},{label:"Pro",amt:16600}] },
+  { name:"Figma", color:"#a855f7", cat:"Productivity", plans:[{label:"Professional",amt:1250},{label:"Organization",amt:3750}] },
+  { name:"Canva", color:"#06b6d4", cat:"Productivity", plans:[{label:"Pro",amt:500},{label:"Teams",amt:750}] },
+  { name:"Hulu", color:"#10b981", cat:"Entertainment", plans:[{label:"Basic",amt:660},{label:"No Ads",amt:1490}] },
 ];
 
 // Cancellation methods per subscription
 const CANCEL_METHODS = {
   'Netflix':    { method:'website', url:'https://netflix.com/cancelplan', features:['Ad-free streaming','4K Ultra HD','4 screens at once'] },
-  'Spotify':    { method:'inapp',   steps:['Open Spotify app → Settings','Tap "Subscription"','Select "Cancel Premium"','Confirm cancellation'], features:['Ad-free music','Offline downloads','High quality audio'] },
+  'Spotify':    { method:'inapp',   steps:['Open Spotify app â†’ Settings','Tap "Subscription"','Select "Cancel Premium"','Confirm cancellation'], features:['Ad-free music','Offline downloads','High quality audio'] },
   'Adobe CC':   { method:'phone',   number:'1-800-833-6687', script:'Hi, I\'d like to cancel my Adobe Creative Cloud subscription. My account email is [your email]. I no longer need the service and would like to process the cancellation today.', features:['Photoshop access','20+ creative apps','100GB cloud storage'] },
   'Disney+':    { method:'website', url:'https://disneyplus.com/account/cancel', features:['Disney originals','Marvel & Star Wars','4K HDR streaming'] },
   'YouTube':    { method:'website', url:'https://youtube.com/paid_memberships', features:['Ad-free videos','Background play','YouTube Music'] },
-  'iCloud+':    { method:'inapp',   steps:['Open Settings → Apple ID','Tap "iCloud"','Tap "Manage Storage"','Downgrade to free plan'], features:['Cloud storage','iCloud Private Relay','Hide My Email'] },
+  'iCloud+':    { method:'inapp',   steps:['Open Settings â†’ Apple ID','Tap "iCloud"','Tap "Manage Storage"','Downgrade to free plan'], features:['Cloud storage','iCloud Private Relay','Hide My Email'] },
   'Notion':     { method:'website', url:'https://notion.so/settings/billing', features:['Unlimited blocks','30-day history','Unlimited uploads'] },
   'FitnessPro': { method:'phone',   number:'1-888-555-0199', script:'Hello, I want to cancel my FitnessPro subscription. My membership ID is [your ID]. Please process the cancellation effective immediately.', features:['Gym access','Personal training','Class bookings'] },
 };
@@ -266,7 +266,7 @@ const ScreenOnboarding = ({ onFinish }) => {
           </div>
           <div className="flex-1">
             <p className="font-bold text-slate-800 text-sm">Connect Gmail</p>
-            <p className="text-xs text-brand font-medium">Recommended · Read-only</p>
+            <p className="text-xs text-brand font-medium">Recommended Â· Read-only</p>
           </div>
           <ChevronRight size={18} className="text-slate-300" />
         </button>
@@ -298,7 +298,7 @@ const ScreenOnboarding = ({ onFinish }) => {
         </div>
       </div>
       <div className="w-8 h-8 border-2 border-slate-200 border-t-brand rounded-full spin mb-4"></div>
-      <h2 className="text-slate-800 text-xl font-bold mb-1">Parsing through email…</h2>
+      <h2 className="text-slate-800 text-xl font-bold mb-1">Parsing through emailâ€¦</h2>
       <p className="text-slate-400 text-sm font-medium">This will only take a moment</p>
     </div>
   );
@@ -389,7 +389,7 @@ const ScreenHome = ({ subs, groups, onSelectSub, onSelectGroup, onShowSpendInsig
           <ChevronRight size={18} className="text-slate-400" />
         </button>
 
-        {/* ── AI Insight Carousel ── */}
+        {/* â”€â”€ AI Insight Carousel â”€â”€ */}
         {visibleInsights.length > 0 && (() => {
           const ins = visibleInsights[carouselIdx % visibleInsights.length];
           if (!ins) return null;
@@ -403,7 +403,7 @@ const ScreenHome = ({ subs, groups, onSelectSub, onSelectGroup, onShowSpendInsig
                 <span className="text-[10px] text-white/50 font-bold">{(carouselIdx % visibleInsights.length) + 1}/{visibleInsights.length}</span>
               </div>
               <h3 className="text-white font-bold text-lg mb-1">{ins.title}</h3>
-              <p className="text-white/70 text-sm mb-4">{ins.desc} Save ${ins.save.toFixed(2)}/mo.</p>
+              <p className="text-white/70 text-sm mb-4">{ins.desc} Save ₹{ins.save.toFixed(0)}/mo.</p>
               <div className="flex gap-3">
                 <button onClick={() => handleTakeAction(ins)}
                   className="flex-1 bg-white text-brand font-bold py-3 rounded-xl text-sm active:scale-[0.98] transition-transform">
@@ -428,11 +428,11 @@ const ScreenHome = ({ subs, groups, onSelectSub, onSelectGroup, onShowSpendInsig
           );
         })()}
 
-        {/* ── Stat Cards ── */}
+        {/* â”€â”€ Stat Cards â”€â”€ */}
         <div className="flex gap-3 mb-6">
           <button onClick={onShowSpendInsights} className="flex-1 bg-slate-50 rounded-2xl p-4 text-left active:bg-slate-100 transition-colors">
             <p className="text-[11px] text-brand font-bold uppercase tracking-wider mb-1">Monthly Spend</p>
-            <p className="text-2xl font-black text-slate-800">${totalSpend.toFixed(2)}</p>
+            <p className="text-2xl font-black text-slate-800">₹{totalSpend.toFixed(0)}</p>
             <div className="flex items-center gap-1 mt-1">
               <TrendingUp size={12} className="text-brand" />
               <span className="text-xs text-brand font-semibold">+12% vs last month</span>
@@ -448,7 +448,7 @@ const ScreenHome = ({ subs, groups, onSelectSub, onSelectGroup, onShowSpendInsig
           </div>
         </div>
 
-        {/* ── Active Subscriptions ── */}
+        {/* â”€â”€ Active Subscriptions â”€â”€ */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Subscriptions</h3>
           <span className="text-xs font-semibold text-brand">See All</span>
@@ -465,12 +465,12 @@ const ScreenHome = ({ subs, groups, onSelectSub, onSelectGroup, onShowSpendInsig
                 </div>
                 <p className="text-xs text-slate-400 font-medium">Due {sub.due}</p>
               </div>
-              <p className="font-bold text-slate-800 text-sm">-${sub.amt.toFixed(2)}</p>
+              <p className="font-bold text-slate-800 text-sm">-₹{sub.amt.toFixed(0)}</p>
             </button>
           ))}
         </div>
 
-        {/* ── Group Subscriptions ── */}
+        {/* â”€â”€ Group Subscriptions â”€â”€ */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Group Subscriptions</h3>
         </div>
@@ -487,14 +487,14 @@ const ScreenHome = ({ subs, groups, onSelectSub, onSelectGroup, onShowSpendInsig
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-400 font-medium">{g.members} members · ${g.perPerson.toFixed(2)}/person</p>
-                <p className="font-bold text-slate-700 text-sm">${g.total.toFixed(2)}</p>
+                <p className="text-xs text-slate-400 font-medium">{g.members} members Â· ₹{g.perPerson.toFixed(0)}/person</p>
+                <p className="font-bold text-slate-700 text-sm">₹{g.total.toFixed(0)}</p>
               </div>
             </button>
           ))}
         </div>
 
-        {/* ── Coming Up ── */}
+        {/* â”€â”€ Coming Up â”€â”€ */}
         {upcomingSubs.length > 0 && (
           <>
             <div className="flex items-center justify-between mb-4">
@@ -511,7 +511,7 @@ const ScreenHome = ({ subs, groups, onSelectSub, onSelectGroup, onShowSpendInsig
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock size={12} className="text-amber-500" />
-                    <p className="font-bold text-slate-800 text-sm">${sub.amt.toFixed(2)}</p>
+                    <p className="font-bold text-slate-800 text-sm">₹{sub.amt.toFixed(0)}</p>
                   </div>
                 </button>
               ))}
@@ -575,7 +575,7 @@ const ScreenSubs = ({ subs, cancelledSubs = [], onSelectSub }) => {
                 <p className="text-xs text-slate-400 font-medium">Due {sub.due}</p>
               </div>
               <div className="text-right">
-                <p className="font-bold text-slate-800 text-sm">${sub.amt.toFixed(2)}</p>
+                <p className="font-bold text-slate-800 text-sm">₹{sub.amt.toFixed(0)}</p>
                 <p className="text-[10px] text-slate-400 font-medium">/mo</p>
               </div>
             </button>
@@ -597,7 +597,7 @@ const ScreenSubs = ({ subs, cancelledSubs = [], onSelectSub }) => {
                     <p className="text-xs text-slate-400 font-medium">Cancelled {sub.cancelledDate}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-slate-400 text-sm line-through">${sub.amt.toFixed(2)}</p>
+                    <p className="font-bold text-slate-400 text-sm line-through">₹{sub.amt.toFixed(0)}</p>
                     <p className="text-[10px] text-brand font-bold">Saved!</p>
                   </div>
                 </div>
@@ -624,7 +624,7 @@ const ScreenCircles = ({ groups, onSelectGroup, onCreateGroup }) => (
         </div>
         <div>
           <p className="font-bold text-slate-800 text-sm">Combine Spotify plans</p>
-          <p className="text-xs text-slate-400 font-medium">Switch to Family Plan to save $5/mo per person.</p>
+          <p className="text-xs text-slate-400 font-medium">Switch to Family Plan to save ₹50/mo per person.</p>
         </div>
       </div>
       {groups.map(g => (
@@ -643,10 +643,10 @@ const ScreenCircles = ({ groups, onSelectGroup, onCreateGroup }) => (
               ))}
             </div>
           </div>
-          <p className="text-xs text-slate-400 font-medium mb-3">{g.members} members · ${g.perPerson.toFixed(2)}/person</p>
+          <p className="text-xs text-slate-400 font-medium mb-3">{g.members} members Â· ₹{g.perPerson.toFixed(0)}/person</p>
           <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400 font-medium">Total</span>
-            <span className="font-bold text-slate-800">${g.total.toFixed(2)}</span>
+            <span className="font-bold text-slate-800">₹{g.total.toFixed(0)}</span>
           </div>
         </button>
       ))}
@@ -659,52 +659,303 @@ const ScreenCircles = ({ groups, onSelectGroup, onCreateGroup }) => (
 );
 
 // =========================================
-// SCREEN: AI AGENT
+// SCREEN: AI AGENT (with Voice + Agentic Actions)
 // =========================================
-const ScreenAgent = () => {
-  const messages = [
-    { from:'ai', text:"Hi Rahul 👋 I'm your AI Financial Concierge. I noticed you haven't used Adobe CC in 3 weeks. Should I bypass their dark pattern cancellation and handle it for you?" },
-    { from:'user', text:"Yes, cancel it for me." },
-    { from:'ai', text:"Done ✅ Cancellation email sent to Adobe. They require a 4-step process, but I navigated it automatically. You just saved $54.99/month!" },
-    { from:'ai', text:"I also found that switching Spotify to a Student plan could save you 45%. Want me to look into that?" },
+const ScreenAgent = ({ subs, onAction }) => {
+  const [messages, setMessages] = useState([
+    { from:'ai', text:"Hi Rahul! I'm your financial concierge. How can I help you optimize your spending today?" }
+  ]);
+  const [inputVal, setInputVal] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [speakingIdx, setSpeakingIdx] = useState(null);
+  const [pendingAction, setPendingAction] = useState(null); // action about to execute
+  const chatEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading, pendingAction]);
+
+  // Execute pending action after showing indicator
+  useEffect(() => {
+    if (!pendingAction) return;
+    const timer = setTimeout(() => {
+      onAction(pendingAction);
+      setPendingAction(null);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [pendingAction, onAction]);
+
+  // Text-to-Speech helper
+  const speakText = useCallback((text, idx) => {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en')) 
+      || voices.find(v => v.lang.startsWith('en-'));
+    if (preferred) utterance.voice = preferred;
+    utterance.onstart = () => setSpeakingIdx(idx);
+    utterance.onend = () => setSpeakingIdx(null);
+    utterance.onerror = () => setSpeakingIdx(null);
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  const stopSpeaking = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setSpeakingIdx(null);
+  }, []);
+
+  const handleSend = async (text) => {
+    if (!text.trim() || isLoading) return;
+
+    const newMessages = [...messages, { from: 'user', text }];
+    setMessages(newMessages);
+    setInputVal('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newMessages })
+      });
+      const data = await response.json();
+      if (data.text) {
+        const aiMsg = { from: 'ai', text: data.text, action: data.action || null };
+        setMessages(prev => {
+          const updated = [...prev, aiMsg];
+          if (voiceMode) {
+            setTimeout(() => speakText(data.text, updated.length - 1), 200);
+          }
+          return updated;
+        });
+        // If there's an action, queue it for execution
+        if (data.action) {
+          setTimeout(() => setPendingAction(data.action), 800);
+        }
+      } else {
+        setMessages(prev => [...prev, { from: 'ai', text: "Error: " + (data.error || "Failed to reach AI.") }]);
+      }
+    } catch (e) {
+      setMessages(prev => [...prev, { from: 'ai', text: "Network error. Make sure the server is running with: python server.py" }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Speech Recognition (STT)
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      // Stop recording
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => setIsRecording(true);
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(r => r[0].transcript)
+        .join('');
+      setInputVal(transcript);
+      // If final result, auto-send
+      if (event.results[0].isFinal) {
+        setIsRecording(false);
+        if (transcript.trim()) {
+          setTimeout(() => handleSend(transcript.trim()), 300);
+        }
+      }
+    };
+    recognition.onerror = (e) => {
+      console.error('Speech error:', e.error);
+      setIsRecording(false);
+    };
+    recognition.onend = () => setIsRecording(false);
+
+    recognition.start();
+  }, [isRecording, handleSend]);
+
+  const quickPrompts = [
+    "Summarize my streaming spend",
+    "Find duplicate subscriptions",
+    "Cancel unused subs",
+    "Any discounts available?"
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white relative">
       <Header />
-      <div className="px-5 mb-2">
-        <h1 className="text-2xl font-bold text-slate-800">AI Agent</h1>
-        <p className="text-xs text-brand font-medium">Your financial concierge</p>
+      <div className="flex items-center justify-between px-5 mb-2">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">AI Agent</h1>
+          <p className="text-xs text-brand font-medium">Your financial concierge</p>
+        </div>
+        {/* Voice Mode Toggle */}
+        <button onClick={() => { setVoiceMode(v => !v); if (voiceMode) stopSpeaking(); }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+            voiceMode 
+              ? 'bg-brand text-white' 
+              : 'bg-slate-100 text-slate-500'
+          }`}>
+          <Volume2 size={14} />
+          {voiceMode ? 'Voice On' : 'Voice Off'}
+        </button>
       </div>
-      <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-36 space-y-4">
+
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-44 space-y-4">
         {messages.map((m, i) => (
-          <div key={i} className={`flex gap-3 ${m.from === 'user' ? 'justify-end' : ''}`}>
+          <div key={i} className={`flex gap-3 mt-4 ${m.from === 'user' ? 'justify-end' : ''}`}>
             {m.from === 'ai' && (
               <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0 mt-1">
                 <Sparkles size={14} className="text-white" />
               </div>
             )}
-            <div className={`max-w-[75%] p-4 text-sm leading-relaxed font-medium ${
+            <div className={`max-w-[75%] text-sm leading-relaxed font-medium ${
               m.from === 'ai'
                 ? 'bg-slate-50 text-slate-800 rounded-tl-[4px] rounded-tr-2xl rounded-br-2xl rounded-bl-2xl'
                 : 'bg-brand text-white rounded-tl-2xl rounded-tr-[4px] rounded-br-2xl rounded-bl-2xl'
             }`}>
-              {m.text}
+              <div className="p-4 pb-2">{m.text}</div>
+              {/* Action badge on AI messages that triggered actions */}
+              {m.from === 'ai' && m.action && (
+                <div className="px-4 pb-2">
+                  <div className="inline-flex items-center gap-1.5 bg-brand/10 text-brand px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                    <Zap size={10} />
+                    {m.action.type === 'cancel' && `Cancelling ${m.action.sub}`}
+                    {m.action.type === 'create_group' && `Splitting ${m.action.sub}`}
+                    {m.action.type === 'snooze' && `Snoozing ${m.action.sub}`}
+                    {m.action.type === 'archive' && `Archiving ${m.action.sub}`}
+                    {m.action.type === 'show_insights' && 'Opening Insights'}
+                    {m.action.type === 'start_checkin' && 'Starting Check-in'}
+                    {m.action.type === 'open_detail' && `Opening ${m.action.sub}`}
+                  </div>
+                </div>
+              )}
+              {/* Speaker button on AI messages */}
+              {m.from === 'ai' && i > 0 && (
+                <div className="px-4 pb-2 flex justify-end">
+                  <button onClick={() => speakingIdx === i ? stopSpeaking() : speakText(m.text, i)}
+                    className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                      speakingIdx === i ? 'text-brand' : 'text-slate-400 hover:text-slate-600'
+                    }`}>
+                    {speakingIdx === i ? (
+                      <><Square size={10} /> Stop</>
+                    ) : (
+                      <><Volume2 size={12} /> Listen</>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
-      </div>
-      <div className="absolute bottom-16 left-0 right-0 px-5 pb-3 bg-white">
-        <div className="flex items-center gap-2">
-          <button className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
-            <Mic size={18} />
-          </button>
-          <div className="flex-1 bg-slate-50 rounded-full px-4 py-3">
-            <input className="w-full text-sm bg-transparent border-none text-slate-800 placeholder-slate-400 font-medium" placeholder="Ask your financial concierge..." />
+        {isLoading && (
+          <div className="flex gap-3 mt-4">
+            <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0 mt-1">
+              <Sparkles size={14} className="text-white animate-pulse" />
+            </div>
+            <div className="bg-slate-50 text-slate-500 rounded-tl-[4px] rounded-tr-2xl rounded-br-2xl rounded-bl-2xl p-4 text-sm font-medium flex items-center gap-2">
+              <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></span>
+              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.15s'}}></span>
+              <span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{animationDelay: '0.3s'}}></span>
+            </div>
           </div>
-          <button className="w-10 h-10 rounded-full bg-brand flex items-center justify-center text-white shrink-0">
-            <Send size={16} />
-          </button>
+        )}
+        {/* Pending Action Indicator */}
+        {pendingAction && (
+          <div className="flex gap-3 mt-4 items-center">
+            <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shrink-0 animate-pulse">
+              <Zap size={14} className="text-white" />
+            </div>
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 text-sm font-bold flex items-center gap-2">
+              <span className="animate-spin inline-block w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full"></span>
+              Taking action...
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Recording Overlay */}
+      {isRecording && (
+        <div className="absolute inset-0 z-30 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center"
+          onClick={toggleRecording}>
+          <div className="relative mb-8">
+            <div className="w-28 h-28 rounded-full bg-brand/20 animate-ping absolute inset-0"></div>
+            <div className="w-28 h-28 rounded-full bg-brand/30 flex items-center justify-center relative">
+              <div className="w-20 h-20 rounded-full bg-brand flex items-center justify-center">
+                <Mic size={36} className="text-white" />
+              </div>
+            </div>
+          </div>
+          <p className="text-white text-lg font-bold mb-2">Listening...</p>
+          <p className="text-white/60 text-sm font-medium mb-1">{inputVal || 'Say something...'}</p>
+          <p className="text-white/40 text-xs font-medium mt-6">Tap anywhere to stop</p>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="absolute bottom-0 left-0 right-0 bg-white">
+        {/* Quick Prompts */}
+        <div className="px-5 flex gap-2 overflow-x-auto no-scrollbar pb-3">
+          {quickPrompts.map((p, i) => (
+            <button key={i} onClick={() => handleSend(p)} disabled={isLoading}
+              className={`whitespace-nowrap px-4 py-2 text-xs font-bold rounded-full transition-colors ${
+                isLoading ? 'bg-slate-50 text-slate-300 cursor-not-allowed' : 'bg-slate-100 text-slate-600 active:bg-slate-200'
+              }`}>
+              {p}
+            </button>
+          ))}
+        </div>
+
+        {/* Input Bar */}
+        <div className="px-5 pb-[70px]">
+          <div className="flex items-center gap-2">
+            <button onClick={toggleRecording} disabled={isLoading}
+              className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                isRecording 
+                  ? 'bg-red-500 text-white animate-pulse' 
+                  : isLoading 
+                    ? 'bg-slate-50 text-slate-300 cursor-not-allowed' 
+                    : 'bg-slate-50 text-slate-400 active:bg-slate-100'
+              }`}>
+              {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
+            </button>
+            <div className="flex-1 bg-slate-50 rounded-full px-4 py-3">
+              <input value={inputVal} onChange={e => setInputVal(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSend(inputVal)}
+                disabled={isLoading || isRecording}
+                className="w-full text-sm bg-transparent border-none text-slate-800 placeholder-slate-400 font-medium outline-none disabled:opacity-50"
+                placeholder={isRecording ? 'Listening...' : isLoading ? 'Thinking...' : 'Ask your financial concierge...'}
+              />
+            </div>
+            <button onClick={() => handleSend(inputVal)} disabled={isLoading || isRecording}
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 transition-all ${
+                isLoading || isRecording ? 'bg-slate-300 cursor-not-allowed' : 'bg-brand active:scale-95'
+              }`}>
+              <Send size={16} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -801,7 +1052,7 @@ const SubDetail = ({ sub, onClose, onSnooze, onStartCancel, onArchive, onMoveToG
           ) : (
              <>
                <p className="text-sm font-bold text-slate-400 mt-1">{sub.plan}</p>
-               <p className="text-4xl font-black text-slate-800 mt-3">${sub.amt.toFixed(2)}<span className="text-base text-slate-400 font-bold">/mo</span></p>
+               <p className="text-4xl font-black text-slate-800 mt-3">₹{sub.amt.toFixed(0)}<span className="text-base text-slate-400 font-bold">/mo</span></p>
              </>
           )}
         </div>
@@ -866,7 +1117,7 @@ const CancellationFlow = ({ sub, onClose, onConfirmCancel, onRemindMe }) => {
   const [showSavings, setShowSavings] = useState(false);
 
   const cancelInfo = CANCEL_METHODS[sub.name] || { method:'website', url:'#', features:['Premium features','Ad-free experience','Priority support'] };
-  const yearlySavings = (sub.amt * 12).toFixed(2);
+  const yearlySavings = (sub.amt * 12).toFixed(0);
 
   // Step 0: Confirm Intent
   if (step === 0) return (
@@ -882,7 +1133,7 @@ const CancellationFlow = ({ sub, onClose, onConfirmCancel, onRemindMe }) => {
         <div className="flex flex-col items-center py-6">
           <LetterAvatar name={sub.name} color={sub.color} size={56} />
           <h3 className="text-lg font-bold text-slate-800 mt-3">{sub.name} {sub.plan}</h3>
-          <p className="text-2xl font-black text-slate-800 mt-1">${sub.amt.toFixed(2)}/mo</p>
+          <p className="text-2xl font-black text-slate-800 mt-1">₹{sub.amt.toFixed(0)}/mo</p>
         </div>
 
         {/* What you'll lose */}
@@ -901,8 +1152,8 @@ const CancellationFlow = ({ sub, onClose, onConfirmCancel, onRemindMe }) => {
         {/* Savings */}
         <div className="bg-brand/5 border border-brand/20 rounded-2xl p-5">
           <p className="text-[11px] font-bold text-brand uppercase tracking-wider mb-2">Potential Savings</p>
-          <p className="text-2xl font-black text-brand">${yearlySavings}<span className="text-sm font-bold text-brand/60">/year</span></p>
-          <p className="text-xs text-slate-400 font-medium mt-1">That's ${sub.amt.toFixed(2)} × 12 months</p>
+          <p className="text-2xl font-black text-brand">₹{yearlySavings}<span className="text-sm font-bold text-brand/60">/year</span></p>
+          <p className="text-xs text-slate-400 font-medium mt-1">That's ₹{sub.amt.toFixed(0)} Ã— 12 months</p>
         </div>
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-white border-t border-slate-100 space-y-3">
@@ -937,9 +1188,9 @@ const CancellationFlow = ({ sub, onClose, onConfirmCancel, onRemindMe }) => {
           </div>
           <p className="text-white font-bold text-base mb-1">Best way to cancel {sub.name}:</p>
           <p className="text-white/70 text-sm">
-            {cancelInfo.method === 'inapp' && 'Cancel directly in the app — we\'ll guide you step by step.'}
-            {cancelInfo.method === 'website' && 'Cancel through their website — we have the direct link.'}
-            {cancelInfo.method === 'phone' && 'This requires a phone call — we\'ll prep you with a script.'}
+            {cancelInfo.method === 'inapp' && 'Cancel directly in the app â€” we\'ll guide you step by step.'}
+            {cancelInfo.method === 'website' && 'Cancel through their website â€” we have the direct link.'}
+            {cancelInfo.method === 'phone' && 'This requires a phone call â€” we\'ll prep you with a script.'}
           </p>
         </div>
 
@@ -1074,7 +1325,7 @@ const CancellationFlow = ({ sub, onClose, onConfirmCancel, onRemindMe }) => {
               <div className="bg-white rounded-xl p-4 border border-slate-200">
                 <p className="text-sm text-slate-700 font-medium italic leading-relaxed">"{cancelInfo.script}"</p>
               </div>
-              <p className="text-xs text-slate-400 font-medium mt-3">💡 Be calm and direct. State your intent clearly.</p>
+              <p className="text-xs text-slate-400 font-medium mt-3">ðŸ’¡ Be calm and direct. State your intent clearly.</p>
             </div>
           </>
         )}
@@ -1156,11 +1407,11 @@ const CancellationFlow = ({ sub, onClose, onConfirmCancel, onRemindMe }) => {
               <p className="text-[11px] font-bold text-brand uppercase tracking-wider mb-2">Your Savings</p>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600 font-medium">Monthly</span>
-                <span className="text-lg font-black text-brand">${sub.amt.toFixed(2)}</span>
+                <span className="text-lg font-black text-brand">₹{sub.amt.toFixed(0)}</span>
               </div>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-sm text-slate-600 font-medium">Yearly</span>
-                <span className="text-lg font-black text-brand">${yearlySavings}</span>
+                <span className="text-lg font-black text-brand">₹{yearlySavings}</span>
               </div>
             </div>
 
@@ -1249,8 +1500,8 @@ const GroupDetail = ({ group, onClose }) => {
             ))}
           </div>
           <h1 className="text-xl font-bold text-slate-800">{group.name}</h1>
-          <p className="text-sm text-slate-400 font-medium">{group.subName} · {group.plan}</p>
-          <p className="text-3xl font-black text-slate-800 mt-2">${group.total.toFixed(2)}<span className="text-sm text-slate-400 font-bold">/mo</span></p>
+          <p className="text-sm text-slate-400 font-medium">{group.subName} Â· {group.plan}</p>
+          <p className="text-3xl font-black text-slate-800 mt-2">₹{group.total.toFixed(0)}<span className="text-sm text-slate-400 font-bold">/mo</span></p>
         </div>
 
         {/* Split breakdown */}
@@ -1258,7 +1509,7 @@ const GroupDetail = ({ group, onClose }) => {
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Cost Split</p>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-slate-600">Per person</span>
-            <span className="text-sm font-bold text-slate-800">${group.perPerson.toFixed(2)}/mo</span>
+            <span className="text-sm font-bold text-slate-800">₹{group.perPerson.toFixed(0)}/mo</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-slate-600">Total members</span>
@@ -1284,7 +1535,7 @@ const GroupDetail = ({ group, onClose }) => {
                     <div>
                       <p className="font-bold text-slate-800 text-sm">{b.name}</p>
                       <p className={`text-xs font-medium ${b.paid || markedSettled ? 'text-brand' : 'text-amber-600'}`}>
-                        {b.paid || markedSettled ? 'Paid' : `Owes $${b.owed.toFixed(2)}`}
+                        {b.paid || markedSettled ? 'Paid' : `Owes ₹${b.owed.toFixed(0)}`}
                       </p>
                     </div>
                   </div>
@@ -1309,7 +1560,7 @@ const GroupDetail = ({ group, onClose }) => {
                   <p className="font-bold text-slate-800 text-sm">{group.nextDue}</p>
                   <p className="text-xs text-slate-400">Auto-renew enabled</p>
                 </div>
-                <p className="font-bold text-slate-800">${group.total.toFixed(2)}</p>
+                <p className="font-bold text-slate-800">₹{group.total.toFixed(0)}</p>
               </div>
             </div>
 
@@ -1347,7 +1598,7 @@ const GroupDetail = ({ group, onClose }) => {
                </p>
                <div className="bg-white px-6 py-3 rounded-xl shadow-sm border border-slate-100 mb-5 text-center">
                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">You Owe</p>
-                 <p className="text-3xl font-black text-slate-800">${group.perPerson.toFixed(2)}</p>
+                 <p className="text-3xl font-black text-slate-800">₹{group.perPerson.toFixed(0)}</p>
                </div>
 
                <button onClick={() => setPaidOwner(true)} disabled={paidOwner}
@@ -1415,7 +1666,7 @@ const SpendInsights = ({ subs, onClose }) => {
         {/* Total */}
         <div className="flex flex-col items-center py-6">
           <p className="text-[11px] font-bold text-brand uppercase tracking-wider mb-1">Total Monthly Spend</p>
-          <p className="text-4xl font-black text-slate-800">${total.toFixed(2)}</p>
+          <p className="text-4xl font-black text-slate-800">₹{total.toFixed(0)}</p>
           <div className="flex items-center gap-1 mt-2">
             <TrendingUp size={14} className="text-brand" />
             <span className="text-sm text-brand font-semibold">+12% vs last month</span>
@@ -1442,7 +1693,7 @@ const SpendInsights = ({ subs, onClose }) => {
                 <p className="text-xs text-slate-400 font-medium">{subs.filter(s => s.cat === cat).length} subscriptions</p>
               </div>
               <div className="text-right">
-                <p className="font-bold text-slate-800 text-sm">${amt.toFixed(2)}</p>
+                <p className="font-bold text-slate-800 text-sm">₹{amt.toFixed(0)}</p>
                 <p className="text-[10px] text-slate-400 font-medium">{(amt / total * 100).toFixed(0)}%</p>
               </div>
             </div>
@@ -1545,7 +1796,7 @@ const AddSubscription = ({ onClose, onAdd }) => {
     </div>
   );
 
-  // ── Step 0: Search ──
+  // â”€â”€ Step 0: Search â”€â”€
   if (step === 0) return (
     <div className="absolute inset-0 z-50 bg-white slide-up-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
@@ -1592,7 +1843,7 @@ const AddSubscription = ({ onClose, onAdd }) => {
     </div>
   );
 
-  // ── Step 1: Details (plan selection or manual entry) ──
+  // â”€â”€ Step 1: Details (plan selection or manual entry) â”€â”€
   if (step === 1) return (
     <div className="absolute inset-0 z-50 bg-white slide-up-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
@@ -1623,7 +1874,7 @@ const AddSubscription = ({ onClose, onAdd }) => {
                     <p className="text-xs text-slate-400">{selected.name} {plan.label}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="font-black text-slate-800">${plan.amt.toFixed(2)}</p>
+                    <p className="font-black text-slate-800">₹{plan.amt.toFixed(0)}</p>
                     <span className="text-xs text-slate-400">/mo</span>
                   </div>
                 </button>
@@ -1681,7 +1932,7 @@ const AddSubscription = ({ onClose, onAdd }) => {
     </div>
   );
 
-  // ── Step 2: Billing Cycle ──
+  // â”€â”€ Step 2: Billing Cycle â”€â”€
   if (step === 2) return (
     <div className="absolute inset-0 z-50 bg-white slide-up-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
@@ -1736,7 +1987,7 @@ const AddSubscription = ({ onClose, onAdd }) => {
     </div>
   );
 
-  // ── Step 3: Commitment ──
+  // â”€â”€ Step 3: Commitment â”€â”€
   if (step === 3) return (
     <div className="absolute inset-0 z-50 bg-white slide-up-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
@@ -1751,7 +2002,7 @@ const AddSubscription = ({ onClose, onAdd }) => {
         <p className="text-slate-400 text-sm font-medium mb-6">How long do you plan to use this?</p>
         <div className="bg-slate-50 rounded-2xl p-6 mb-6">
           <p className="text-center text-3xl font-black text-slate-800 mb-1">
-            {form.commitUntilCancel ? '∞' : `${form.commitment} mo`}
+            {form.commitUntilCancel ? 'âˆž' : `${form.commitment} mo`}
           </p>
           <p className="text-center text-xs text-slate-400 font-medium">
             {form.commitUntilCancel ? 'Until you cancel' : `${form.commitment} month${form.commitment > 1 ? 's' : ''} commitment`}
@@ -1793,7 +2044,7 @@ const AddSubscription = ({ onClose, onAdd }) => {
     </div>
   );
 
-  // ── Step 4: Auto Remind ──
+  // â”€â”€ Step 4: Auto Remind â”€â”€
   if (step === 4) return (
     <div className="absolute inset-0 z-50 bg-white slide-up-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
@@ -1842,7 +2093,7 @@ const AddSubscription = ({ onClose, onAdd }) => {
     </div>
   );
 
-  // ── Step 5: Add to Group ──
+  // â”€â”€ Step 5: Add to Group â”€â”€
   if (step === 5) return (
     <div className="absolute inset-0 z-50 bg-white slide-up-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
@@ -1929,7 +2180,7 @@ const AddSubscription = ({ onClose, onAdd }) => {
     </div>
   );
 
-  // ── Step 6: Confirm ──
+  // â”€â”€ Step 6: Confirm â”€â”€
   return (
     <div className="absolute inset-0 z-50 bg-white slide-up-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
@@ -1946,8 +2197,8 @@ const AddSubscription = ({ onClose, onAdd }) => {
           <div className="flex flex-col items-center">
             <LetterAvatar name={form.name || 'S'} color={form.color} size={56} />
             <h3 className="text-lg font-bold text-slate-800 mt-3">{form.name}</h3>
-            <p className="text-xs text-slate-400 font-medium">{form.plan || 'Standard'} · {form.cat}</p>
-            <p className="text-3xl font-black text-slate-800 mt-2">${parseFloat(form.amt || 0).toFixed(2)}<span className="text-sm text-slate-400 font-bold">/mo</span></p>
+            <p className="text-xs text-slate-400 font-medium">{form.plan || 'Standard'} Â· {form.cat}</p>
+            <p className="text-3xl font-black text-slate-800 mt-2">₹{parseFloat(form.amt || 0).toFixed(0)}<span className="text-sm text-slate-400 font-bold">/mo</span></p>
           </div>
         </div>
         {/* Summary rows */}
@@ -2087,7 +2338,7 @@ const CreateGroupFlow = ({ onClose, onSave, subs, initialSub }) => {
                     <LetterAvatar name={s.name} color={s.color} size={40} />
                     <div className="text-left">
                       <p className="font-bold text-slate-800 text-sm">{s.name}</p>
-                      <p className="text-xs text-slate-400 font-medium">${s.amt.toFixed(2)}/mo</p>
+                      <p className="text-xs text-slate-400 font-medium">₹{s.amt.toFixed(0)}/mo</p>
                     </div>
                   </div>
                   {form.sub?.id === s.id && <CheckCircle2 size={20} className="text-brand" />}
@@ -2156,14 +2407,14 @@ const CreateGroupFlow = ({ onClose, onSave, subs, initialSub }) => {
         {step === 3 && (
           <div className="pt-6">
              <h3 className="text-xl font-bold text-slate-800 mb-2">Split method</h3>
-             <p className="text-sm text-slate-500 mb-6">How do you want to divide the ${form.sub?.amt.toFixed(2)} bill?</p>
+             <p className="text-sm text-slate-500 mb-6">How do you want to divide the ₹{form.sub?.amt.toFixed(0)} bill?</p>
 
              <div className="space-y-4">
                <button onClick={() => setForm({...form, split: 'equal'})}
                  className={`w-full flex items-center justify-between p-5 border-2 rounded-2xl transition-all ${form.split === 'equal' ? 'border-brand bg-brand/5' : 'border-slate-100'}`}>
                  <div className="text-left">
                    <p className="font-bold text-slate-800">Equal split</p>
-                   <p className="text-xs text-slate-500 mt-1">${(form.sub?.amt / (form.memberEmails.length + 1)).toFixed(2)} per person</p>
+                   <p className="text-xs text-slate-500 mt-1">₹{(form.sub?.amt / (form.memberEmails.length + 1)).toFixed(0)} per person</p>
                  </div>
                  {form.split === 'equal' ? <CheckCircle2 className="text-brand" /> : <div className="w-6 h-6 rounded-full border-2 border-slate-200" />}
                </button>
@@ -2340,7 +2591,7 @@ const CheckinFlow = ({ subs, onClose, onStartCancellations, onOpenDetail }) => {
              <LetterAvatar name={currentSub.name} color={currentSub.color} size={80} />
              <h2 className="text-2xl font-black text-slate-800 mt-4">{currentSub.name}</h2>
              <p className="text-slate-400 font-medium">{currentSub.plan}</p>
-             <p className="text-4xl font-black text-slate-800 mt-4">${currentSub.amt.toFixed(2)}<span className="text-lg text-slate-400">/mo</span></p>
+             <p className="text-4xl font-black text-slate-800 mt-4">₹{currentSub.amt.toFixed(0)}<span className="text-lg text-slate-400">/mo</span></p>
              <p className="text-sm font-bold text-slate-500 mt-6 bg-white py-1.5 px-4 shadow-sm border border-slate-100 rounded-full">Renews {currentSub.due}</p>
           </div>
           <div className="bg-white border-t border-slate-100 px-5 py-4 text-center">
@@ -2438,6 +2689,50 @@ const App = () => {
       setCancelQueue(queue.slice(1));
     }
   };
+  // Handle agentic actions from AI Agent
+  const handleAgentAction = useCallback((action) => {
+    if (!action || !action.type) return;
+    const findSub = (name) => subs.find(s => s.name.toLowerCase() === name.toLowerCase());
+
+    switch (action.type) {
+      case 'cancel': {
+        const sub = findSub(action.sub);
+        if (sub) { setTab('home'); setTimeout(() => handleStartCancel(sub), 300); }
+        break;
+      }
+      case 'create_group': {
+        const sub = findSub(action.sub);
+        if (sub) { setTab('home'); setTimeout(() => setIsCreateGroupOpen(sub), 300); }
+        break;
+      }
+      case 'snooze': {
+        const sub = findSub(action.sub);
+        if (sub) { handleSnooze(sub.id); }
+        break;
+      }
+      case 'archive': {
+        const sub = findSub(action.sub);
+        if (sub) { handleConfirmCancel(sub.id); }
+        break;
+      }
+      case 'show_insights': {
+        setTab('home');
+        setTimeout(() => setShowSpendInsights(true), 300);
+        break;
+      }
+      case 'start_checkin': {
+        setTab('home');
+        setTimeout(() => setIsCheckinOpen(true), 300);
+        break;
+      }
+      case 'open_detail': {
+        const sub = findSub(action.sub);
+        if (sub) { setTab('home'); setTimeout(() => setSelectedSub(sub), 300); }
+        break;
+      }
+      default: break;
+    }
+  }, [subs]);
 
   // Pre-app screens
   if (screen === 'splash') return <ScreenSplash onFinish={() => setScreen('auth')} />;
@@ -2450,7 +2745,7 @@ const App = () => {
       {tab === 'home'    && <ScreenHome subs={subs} groups={groups} onSelectSub={setSelectedSub} onSelectGroup={setSelectedGroup} onShowSpendInsights={() => setShowSpendInsights(true)} onStartCheckin={() => setIsCheckinOpen(true)} />}
       {tab === 'subs'    && <ScreenSubs subs={subs} cancelledSubs={cancelledSubs} onSelectSub={setSelectedSub} />}
       {tab === 'circles' && <ScreenCircles groups={groups} onSelectGroup={setSelectedGroup} onCreateGroup={() => setIsCreateGroupOpen(true)} />}
-      {tab === 'agent'   && <ScreenAgent />}
+      {tab === 'agent'   && <ScreenAgent subs={subs} onAction={handleAgentAction} />}
 
       <BottomNav active={tab} setTab={setTab} />
       {tab !== 'agent' && <FAB onClick={() => setShowAddSub(true)} />}
@@ -2493,5 +2788,6 @@ const App = () => {
   );
 };
 
-// ── Render ──
+// â”€â”€ Render â”€â”€
 createRoot(document.getElementById('root')).render(<App />);
+
